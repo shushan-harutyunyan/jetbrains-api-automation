@@ -30,9 +30,19 @@ This is a comprehensive QA automation framework for JetBrains Account API testin
 
 ### 1. Environment Setup
 ```bash
-# Clone the repository
-git clone <repository-url>
+# Clone the repository (choose one option)
+
+# Option A: HTTPS (works everywhere, may require authentication)
+git clone https://github.com/shushan-harutyunyan/jetbrains-api-automation.git
+
+# Option B: SSH (requires SSH key setup, no password prompts)
+git clone git@github.com:shushan-harutyunyan/jetbrains-api-automation.git
+
+# Navigate to project directory
 cd jetbrains-api-automation
+
+# Note: For SSH cloning, ensure you have SSH keys configured:
+# https://docs.github.com/en/authentication/connecting-to-github-with-ssh
 
 # Create virtual environment
 python -m venv .venv
