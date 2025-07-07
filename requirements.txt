@@ -1,0 +1,8 @@
+pytest==7.4.3
+pytest-check==2.3.0
+pytest-xdist==3.5.0
+requests==2.31.0
+faker==21.0.0
+python-dotenv==1.0.0
+pytest-html==4.1.1
+pytest-json-report==1.5.0 
