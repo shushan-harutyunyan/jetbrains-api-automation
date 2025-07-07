@@ -6,19 +6,21 @@ import pytest
 import pytest_check as check
 import random
 from config.api_config import status_codes, config, error_codes
+from utils.test_helpers import test_data_generator
 
 
 class TestChangeLicenseTeam:
     """Test suite for license team change functionality"""
         
     @pytest.fixture
-    def valid_test_data(self, request, test_setup):
+    def valid_test_data(self, request, license_client):
+        #Usage: @pytest.mark.parametrize("valid_test_data", [("Team 1", "Team 2", 3), ("Team 2", "Team 1", 2)], indirect=True)
         source_team_name, target_team_name, license_count = request.param
         source_team_id = config.TEAM_IDS[source_team_name]
         target_team_id = config.TEAM_IDS[target_team_name]
         
         # Get all available licenses from source team
-        available_licenses = test_setup.license_client.get_available_licenses(team_id=str(source_team_id))
+        available_licenses = license_client.get_team_available_licenses(team_id=str(source_team_id))
         
         # Select specified number of license IDs
         if len(available_licenses) < license_count:
@@ -38,14 +40,14 @@ class TestChangeLicenseTeam:
         ("Team 1", "Team 2", 3),
         ("Team 2", "Team 1", 2),
     ], indirect=True, ids=["Team 1 to Team 2 (3 licenses)", "Team 2 to Team 1 (2 licenses)"])
-    def test_change_license_team_valid_data(self, valid_test_data, test_setup):
+    def test_change_license_team_valid_data(self, valid_test_data, license_client):
         """
         Test Case: Change team for licenses with valid data
         
         Expected Result: Team change should be successful
         Status Code: 200
         """
-        response = test_setup.license_client.change_license_team(
+        response = license_client.change_license_team(
             license_ids=valid_test_data["license_ids"],
             target_team_id=valid_test_data["target_team_id"]
         )
@@ -55,7 +57,7 @@ class TestChangeLicenseTeam:
         response_data = response.json()
         check.is_in("licenseIds", response_data, "Response should contain 'licenseIds' field")
         check.is_instance(response_data["licenseIds"], list, "licenseIds should be a list")
-        check.equal(set(response_data["licenseIds"]), set(valid_test_data["license_ids"]), 
+        check.equal(set(response_data["licenseIds"]), set(valid_test_data["license_ids"]),
                    f"Response licenseIds should match input license IDs")
 
     @pytest.mark.negative
@@ -64,7 +66,7 @@ class TestChangeLicenseTeam:
     @pytest.mark.parametrize("target_team", [
         "Team 1", 
         "Team 2"])
-    def test_change_license_team_empty_license_list(self, target_team, test_setup):
+    def test_change_license_team_empty_license_list(self, target_team, license_client):
         """
         Test Case: Change team with empty license list
 
@@ -73,7 +75,7 @@ class TestChangeLicenseTeam:
         """
         # Suggestion: Request could be rejected with 400 Bad Request
 
-        response = test_setup.license_client.change_license_team(
+        response = license_client.change_license_team(
             license_ids=[],
             target_team_id=config.TEAM_IDS[target_team]
         )
@@ -87,16 +89,16 @@ class TestChangeLicenseTeam:
 
     @pytest.mark.negative
     @pytest.mark.license_team_change
-    def test_change_license_team_invalid_target_team(self, available_license_id, test_setup):
+    def test_change_license_team_invalid_target_team(self, available_license_id, license_client):
         """
         Test Case: Change team with invalid target team
 
         Expected Result: Request should be rejected with 404 Not Found
         Status Code: 404
         """
-        target_team_id = test_setup.test_data.generate_invalid_team_id()
+        target_team_id = test_data_generator.generate_invalid_team_id()
         
-        response = test_setup.license_client.change_license_team(
+        response = license_client.change_license_team(
             license_ids=[available_license_id], 
             target_team_id=target_team_id
         )
@@ -109,15 +111,14 @@ class TestChangeLicenseTeam:
     @pytest.mark.negative
     @pytest.mark.authorization
     @pytest.mark.license_team_change
-    @pytest.mark.parametrize("test_setup", ["unauthorized_license_client"], indirect=True)
-    def test_change_license_team_missing_authorization(self, available_license_id, test_setup, random_team_id):
+    def test_change_license_team_missing_authorization(self, available_license_id, random_team_id, unauthorized_license_client):
         """
         Test Case: Change license team without proper authentication
         
         Expected Result: Request should be rejected with 401 Unauthorized
         Status Code: 401
         """
-        response = test_setup.license_client.change_license_team(
+        response = unauthorized_license_client.change_license_team(
             license_ids=[available_license_id],
             target_team_id=random_team_id
         )
@@ -130,15 +131,14 @@ class TestChangeLicenseTeam:
     @pytest.mark.negative
     @pytest.mark.authorization
     @pytest.mark.license_team_change
-    @pytest.mark.parametrize("test_setup", ["invalid_api_key_license_client"], indirect=True)
-    def test_change_license_team_invalid_authorization(self, available_license_id, test_setup, random_team_id):
+    def test_change_license_team_invalid_authorization(self, available_license_id, random_team_id, invalid_api_key_license_client):
         """
         Test Case: Change license team with invalid API key
         
         Expected Result: Request should be rejected with 401 Unauthorized
         Status Code: 401
         """
-        response = test_setup.license_client.change_license_team(
+        response = invalid_api_key_license_client.change_license_team(
             license_ids=[available_license_id],
             target_team_id=random_team_id
         )

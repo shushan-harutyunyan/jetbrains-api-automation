@@ -38,6 +38,7 @@ class EndpointsConfig:
     ASSIGN_LICENSE = "/customer/licenses/assign"
     CHANGE_LICENSE_TEAM = "/customer/changeLicensesTeam"
     GET_LICENSES = "/customer/licenses"
+    GET_TEAM_LICENSES = "/customer/teams/{team_id}/licenses"
     REVOKE_LICENSE = "/customer/licenses/revoke"
 
 
@@ -81,6 +82,10 @@ class ErrorCodes:
     # Validation errors
     INVALID_CONTACT_EMAIL = {
         "code": "INVALID_CONTACT_EMAIL",
+        "description": None
+    }
+    INVALID_CONTACT_NAME = {
+        "code": "INVALID_CONTACT_NAME",
         "description": None
     }
     

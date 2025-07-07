@@ -14,9 +14,10 @@ class TestLicenseAssignment:
     """Test suite for license assignment functionality"""
         
     @pytest.fixture()
-    def valid_test_data(self, available_license_id, test_setup):
+    def valid_test_data(self, available_license_id):
+        #Usage: @pytest.mark.parametrize("valid_test_data", [("Team 1", "Team 2", 3), ("Team 2", "Team 1", 2)], indirect=True)
         try:
-            user_data = test_setup.test_data.generate_user_data()
+            user_data = test_data_generator.generate_user_data()
             valid_test_data = {
                 "licenseId": available_license_id,
                 "email": user_data.get("email"),
@@ -30,7 +31,8 @@ class TestLicenseAssignment:
 
     @pytest.mark.positive
     @pytest.mark.license_assignment
-    def test_assign_license_valid_user_data(self, valid_test_data, test_setup):
+    @pytest.mark.shared_state  # Uses real license data
+    def test_assign_license_valid_user_data(self, valid_test_data, license_client):
         """
         Test Case: Assign license with valid user data
 
@@ -38,7 +40,7 @@ class TestLicenseAssignment:
 
         Expected Status Code: 200
         """
-        response = test_setup.license_client.assign_license(
+        response = license_client.assign_license(
             email=valid_test_data["email"],
             first_name=valid_test_data["firstName"],
             last_name=valid_test_data["lastName"],
@@ -51,8 +53,9 @@ class TestLicenseAssignment:
 
     @pytest.mark.negative
     @pytest.mark.license_assignment
+    @pytest.mark.parallel_safe  # Pure validation test - no shared state
     @pytest.mark.parametrize("invalid_email", test_data_generator.generate_invalid_email_addresses())
-    def test_assign_license_invalid_email_formats(self, valid_test_data, invalid_email, test_setup):
+    def test_assign_license_invalid_email_formats(self, valid_test_data, invalid_email, license_client):
         """
         Test Case: Assign license with invalid email formats
 
@@ -61,7 +64,7 @@ class TestLicenseAssignment:
         Status Code: 400
         """
         
-        response = test_setup.license_client.assign_license(
+        response = license_client.assign_license(
             email=invalid_email,
             first_name=valid_test_data["firstName"],
             last_name=valid_test_data["lastName"],
@@ -79,6 +82,12 @@ class TestLicenseAssignment:
     
     @pytest.fixture()
     def data_with_empty_field(self, valid_test_data, request):
+        #Usage: @pytest.mark.parametrize("data_with_empty_field", [
+        #    ("email", status_codes.BAD_REQUEST),
+        #    ("firstName", status_codes.BAD_REQUEST),
+        #    ("lastName", status_codes.BAD_REQUEST),
+        #    ("licenseId", status_codes.NOT_FOUND),
+        #], indirect=True, ids=["email", "firstName", "lastName", "licenseId"])
         empty_field_name, expected_status = request.param
         valid_test_data[empty_field_name] = ""
         return valid_test_data, empty_field_name, expected_status
@@ -92,7 +101,7 @@ class TestLicenseAssignment:
         ("lastName", status_codes.BAD_REQUEST),
         ("licenseId", status_codes.NOT_FOUND),
     ], indirect=True, ids=["email", "firstName", "lastName", "licenseId"])
-    def test_assign_license_empty_required_fields(self, data_with_empty_field, test_setup):
+    def test_assign_license_empty_required_fields(self, data_with_empty_field, license_client):
         """
         Test Case: Assign license with empty required fields
 
@@ -100,7 +109,7 @@ class TestLicenseAssignment:
         """
         test_data, empty_field_name, expected_status = data_with_empty_field
 
-        response = test_setup.license_client.assign_license(
+        response = license_client.assign_license(
             email=test_data["email"],
             first_name=test_data["firstName"],
             last_name=test_data["lastName"],
@@ -112,16 +121,20 @@ class TestLicenseAssignment:
                    f"Expected {expected_status} for empty {empty_field_name}, got {response.status_code}")
 
     @pytest.fixture()
-    def data_with_exceeding_character_limit(self, test_setup, valid_test_data, request):
+    def data_with_exceeding_character_limit(self, valid_test_data, request):
+        #Usage: @pytest.mark.parametrize("data_with_exceeding_character_limit", [
+        #    "firstName",
+        #    "lastName"
+        #    ], indirect=True, ids=["firstName", "lastName"])
         exceeding_field_name = request.param
-        boundary_data = test_setup.test_data.generate_boundary_test_data()
+        boundary_data = test_data_generator.generate_boundary_test_data()
         very_long_strings = boundary_data.get("very_long_strings", {})
         exceeding_field_value = very_long_strings.get(exceeding_field_name, "")
         
         test_data = valid_test_data.copy()
         test_data[exceeding_field_name] = exceeding_field_value
         expected_status = status_codes.BAD_REQUEST
-        expected_field_code = "INVALID_CONTACT_NAME"
+        expected_field_code = error_codes.INVALID_CONTACT_NAME["code"]
         expected_description = "Value is too long."
         return test_data, exceeding_field_name, expected_field_code, expected_description, expected_status
     
@@ -132,7 +145,7 @@ class TestLicenseAssignment:
         "firstName",
         "lastName"
         ], indirect=True, ids=["firstName", "lastName"])
-    def test_assign_license_exceeding_character_limit_fields(self, test_setup, data_with_exceeding_character_limit):
+    def test_assign_license_exceeding_character_limit_fields(self, data_with_exceeding_character_limit, license_client):
         """
         Test Case: Assign license with very long field value
 
@@ -140,7 +153,7 @@ class TestLicenseAssignment:
         """
         test_data, exceeding_field_name, expected_field_code, expected_description, expected_status = data_with_exceeding_character_limit
         
-        response = test_setup.license_client.assign_license(
+        response = license_client.assign_license(
             email=test_data["email"],
             first_name=test_data["firstName"],
             last_name=test_data["lastName"],
@@ -153,18 +166,22 @@ class TestLicenseAssignment:
         check.equal(error_data["description"], expected_description, f"Expected {expected_description} for {exceeding_field_name} field exceeding character limit, got {response.json()['description']}")
 
     @pytest.fixture()
-    def data_with_special_character_in_fields(self, test_setup, valid_test_data, request):
+    def data_with_special_character_in_fields(self, valid_test_data, request):
+        #Usage: @pytest.mark.parametrize("data_with_special_character_in_fields", [
+        #    "firstName",
+        #    "lastName"
+        #    ], indirect=True, ids=["firstName", "lastName"])
         field_name = request.param
-        boundary_data = test_setup.test_data.generate_boundary_test_data()
+        boundary_data = test_data_generator.generate_boundary_test_data()
         special_characters = boundary_data.get("special_characters", {})
         field_value = special_characters.get(field_name, "")
         
-        test_data = valid_test_data.copy()
-        test_data[field_name] = field_value
+        #test_data = valid_test_data.copy()
+        valid_test_data[field_name] = field_value
         expected_status = status_codes.BAD_REQUEST
-        expected_field_code = "INVALID_CONTACT_NAME"
+        expected_field_code = error_codes.INVALID_CONTACT_NAME["code"]
         expected_description = "Please, don't use special characters."
-        return test_data, field_name, expected_field_code, expected_description, expected_status
+        return valid_test_data, field_name, expected_field_code, expected_description, expected_status
     
     @pytest.mark.negative
     @pytest.mark.boundary
@@ -173,7 +190,7 @@ class TestLicenseAssignment:
         "firstName",
         "lastName"
         ], indirect=True, ids=["firstName", "lastName"])    
-    def test_assign_license_special_characters_in_fields(self, test_setup, data_with_special_character_in_fields):
+    def test_assign_license_special_characters_in_fields(self, data_with_special_character_in_fields, license_client):
         """
         Test Case: Assign license with special characters in fields
 
@@ -181,12 +198,12 @@ class TestLicenseAssignment:
         """
         test_data, field_name, expected_field_code, expected_description, expected_status = data_with_special_character_in_fields
         
-        response = test_setup.license_client.assign_license(
+        response = license_client.assign_license(
             email=test_data["email"],
             first_name=test_data["firstName"],
             last_name=test_data["lastName"],
             license_id=test_data["licenseId"],
-            send_email=False
+            #send_email=False
         )
         check.equal(response.status_code, expected_status, f"Expected {expected_status} for {field_name} field with special characters, got {response.status_code}")
         error_data = response.json()
@@ -196,8 +213,8 @@ class TestLicenseAssignment:
     @pytest.mark.negative
     @pytest.mark.authorization
     @pytest.mark.license_assignment
-    @pytest.mark.parametrize("test_setup", ["unauthorized_license_client"], indirect=True)
-    def test_assign_license_missing_authorization(self, valid_test_data, test_setup):
+    @pytest.mark.parallel_safe  # Auth test - no shared state
+    def test_assign_license_missing_authorization(self, valid_test_data, unauthorized_license_client):
         """
         Test Case: Assign license without proper authentication
 
@@ -205,7 +222,7 @@ class TestLicenseAssignment:
 
         Status Code: 401
         """
-        response = test_setup.license_client.assign_license(
+        response = unauthorized_license_client.assign_license(
             email=valid_test_data["email"],
             first_name=valid_test_data["firstName"],
             last_name=valid_test_data["lastName"],
@@ -221,8 +238,7 @@ class TestLicenseAssignment:
     @pytest.mark.negative
     @pytest.mark.authorization
     @pytest.mark.license_assignment
-    @pytest.mark.parametrize("test_setup", ["invalid_api_key_license_client"], indirect=True)
-    def test_assign_license_invalid_authorization(self, valid_test_data, test_setup):
+    def test_assign_license_invalid_authorization(self, valid_test_data, invalid_api_key_license_client):
         """
         Test Case: Assign license with invalid API key
 
@@ -230,7 +246,7 @@ class TestLicenseAssignment:
 
         Status Code: 401
         """
-        response = test_setup.license_client.assign_license(
+        response = invalid_api_key_license_client.assign_license(
             email=valid_test_data["email"],
             first_name=valid_test_data["firstName"],
             last_name=valid_test_data["lastName"],
@@ -245,7 +261,7 @@ class TestLicenseAssignment:
 
     @pytest.mark.negative
     @pytest.mark.license_assignment
-    def test_assign_license_invalid_license_id(self, valid_test_data, test_setup):
+    def test_assign_license_invalid_license_id(self, valid_test_data, license_client):
         """
         Test Case: Assign license with invalid license ID
 
@@ -253,9 +269,9 @@ class TestLicenseAssignment:
 
         Status Code: 404
         """
-        invalid_license_id = test_setup.test_data.generate_invalid_license_id()
+        invalid_license_id = test_data_generator.generate_invalid_license_id()
         
-        response = test_setup.license_client.assign_license(
+        response = license_client.assign_license(
             email=valid_test_data["email"],
             first_name=valid_test_data["firstName"],
             last_name=valid_test_data["lastName"],
@@ -271,7 +287,7 @@ class TestLicenseAssignment:
 
     @pytest.mark.negative
     @pytest.mark.license_assignment
-    def test_assign_license_invalid_json(self, test_setup):
+    def test_assign_license_invalid_json(self, license_client):
         """
         Test Case: Send invalid JSON in request body
 
@@ -279,16 +295,17 @@ class TestLicenseAssignment:
 
         Status Code: 400
         """
-        invalid_json = test_setup.test_data.generate_invalid_json()
+        invalid_json = test_data_generator.generate_invalid_json()
         
-        response = test_setup.license_client.assign_license(raw_json=invalid_json)
+        response = license_client.assign_license(raw_json=invalid_json)
         
         check.equal(response.status_code, status_codes.BAD_REQUEST, f"Expected {status_codes.BAD_REQUEST} status, got {response.status_code}")
         
     
     @pytest.mark.negative
     @pytest.mark.license_assignment
-    def test_assign_license_duplicate_assignment(self, valid_test_data, test_setup):
+    @pytest.mark.shared_state  # Uses real assigned license data
+    def test_assign_license_duplicate_assignment(self, valid_test_data, license_client):
         """
         Test Case: Assign an already assigned license to a different user
 
@@ -299,12 +316,12 @@ class TestLicenseAssignment:
         
         # Get an already assigned license ID
         try:
-            assigned_license_id = test_setup.license_client.get_assigned_license()
+            assigned_license_id = license_client.get_assigned_license()
         except Exception as e:
             pytest.skip(f"No assigned licenses available for duplicate test: {str(e)}")
         
         # Try to assign it to a different user
-        response = test_setup.license_client.assign_license(
+        response = license_client.assign_license(
             email=valid_test_data["email"],
             first_name=valid_test_data["firstName"],
             last_name=valid_test_data["lastName"],

@@ -1,7 +1,7 @@
 """
 JetBrains Account API Client
 """
-from typing import Dict, Optional
+from typing import Dict, Optional, Any
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
@@ -114,7 +114,7 @@ class LicenseAPIClient(APIClient):
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
         license_id: Optional[str] = None,
-        product_code: str = "II",
+        product_code: str = "",
         send_email: bool = False,
         team_id: int = 1,
         include_offline_activation_code: bool = True,
@@ -150,37 +150,43 @@ class LicenseAPIClient(APIClient):
     def change_license_team(
         self,
         license_ids: list,
-        target_team_id: int,
-        source_team_id: Optional[int] = None
+        target_team_id: int
     ) -> requests.Response:
         """ Change team for licenses """
         payload = {
             "licenseIds": license_ids,
             "targetTeamId": target_team_id
         }
-        
-        if source_team_id:
-            payload["sourceTeamId"] = source_team_id
-        
+
         return self.post(endpoints.CHANGE_LICENSE_TEAM, json_data=payload)
     
     def get_licenses(
         self, 
-        team_id: Optional[str] = None, 
         assigned: Optional[bool] = None
     ) -> requests.Response:
-        """ Get licenses """
+        """ Get all licenses in organization """
         params = {}
-        if team_id:
-            params["teamId"] = team_id
         if assigned is not None:
             params["assigned"] = str(assigned).lower()
         
         return self.get(endpoints.GET_LICENSES, params=params)
     
-    def get_available_licenses(self, team_id: Optional[str] = None) -> list:
-        """ Get list of unassigned license IDs """
-        response = self.get_licenses(team_id=team_id, assigned=False)
+    def get_team_licenses(
+        self, 
+        team_id: str,
+        assigned: Optional[bool] = None
+    ) -> requests.Response:
+        """ Get licenses for a specific team """
+        endpoint = endpoints.GET_TEAM_LICENSES.format(team_id=team_id)
+        params = {}
+        if assigned is not None:
+            params["assigned"] = str(assigned).lower()
+        
+        return self.get(endpoint, params=params)
+    
+    def get_available_licenses(self) -> list:
+        """ Get list of unassigned license IDs from organization """
+        response = self.get_licenses(assigned=False)
         
         if response.status_code != 200:
             raise Exception(f"Failed to get licenses: {response.status_code} - {response.text}")
@@ -203,9 +209,9 @@ class LicenseAPIClient(APIClient):
         except ValueError as e:
             raise Exception(f"Failed to parse licenses response: {e}")
     
-    def get_assigned_licenses(self, team_id: Optional[str] = None) -> list:
-        """ Get list of assigned license IDs """
-        response = self.get_licenses(team_id=team_id, assigned=True)
+    def get_assigned_licenses(self) -> list:
+        """ Get list of assigned license IDs from organization """
+        response = self.get_licenses(assigned=True)
         
         if response.status_code != 200:
             raise Exception(f"Failed to get licenses: {response.status_code} - {response.text}")
@@ -228,15 +234,75 @@ class LicenseAPIClient(APIClient):
         except ValueError as e:
             raise Exception(f"Failed to parse licenses response: {e}")
 
-    def get_available_license(self, team_id: Optional[str] = None) -> str:
-        """ Get a single available license ID """
-        unassigned_licenses = self.get_available_licenses(team_id)
+    def get_available_license(self) -> str:
+        """ Get a single available license ID from organization """
+        unassigned_licenses = self.get_available_licenses()
         available_license = unassigned_licenses[0]
         return available_license
 
-    def get_assigned_license(self, team_id: Optional[str] = None) -> str:
-        """ Get a single assigned license ID """
-        assigned_licenses = self.get_assigned_licenses(team_id)
+    def get_assigned_license(self) -> str:
+        """ Get a single assigned license ID from organization """
+        assigned_licenses = self.get_assigned_licenses()
+        assigned_license = assigned_licenses[0]
+        return assigned_license
+    
+    def get_team_available_licenses(self, team_id: str) -> list:
+        """ Get list of unassigned license IDs from specific team """
+        response = self.get_team_licenses(team_id=team_id, assigned=False)
+        
+        if response.status_code != 200:
+            raise Exception(f"Failed to get team licenses: {response.status_code} - {response.text}")
+        
+        try:
+            licenses_data = response.json()
+            
+            unassigned_licenses = [
+                license.get('licenseId') 
+                for license in licenses_data 
+                if license.get('licenseId') and license.get('isAvailableToAssign', False)
+            ]
+            
+            if not unassigned_licenses:
+                raise Exception(f"unassigned license list is empty for team {team_id}")
+            
+            return unassigned_licenses
+            
+        except ValueError as e:
+            raise Exception(f"Failed to parse team licenses response: {e}")
+    
+    def get_team_assigned_licenses(self, team_id: str) -> list:
+        """ Get list of assigned license IDs from specific team """
+        response = self.get_team_licenses(team_id=team_id, assigned=True)
+        
+        if response.status_code != 200:
+            raise Exception(f"Failed to get team licenses: {response.status_code} - {response.text}")
+        
+        try:
+            licenses_data = response.json()
+            
+            assigned_licenses = [
+                license.get('licenseId') 
+                for license in licenses_data 
+                if license.get('licenseId') and not license.get('isAvailableToAssign', True)
+            ]
+            
+            if not assigned_licenses:
+                raise Exception(f"assigned license list is empty for team {team_id}")
+            
+            return assigned_licenses
+            
+        except ValueError as e:
+            raise Exception(f"Failed to parse team licenses response: {e}")
+    
+    def get_team_available_license(self, team_id: str) -> str:
+        """ Get a single available license ID from specific team """
+        unassigned_licenses = self.get_team_available_licenses(team_id)
+        available_license = unassigned_licenses[0]
+        return available_license
+    
+    def get_team_assigned_license(self, team_id: str) -> str:
+        """ Get a single assigned license ID from specific team """
+        assigned_licenses = self.get_team_assigned_licenses(team_id)
         assigned_license = assigned_licenses[0]
         return assigned_license
 

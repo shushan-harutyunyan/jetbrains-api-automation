@@ -37,7 +37,7 @@ def available_licenses_from_team(request):
         team_id, license_count = request.param
         license_client = LicenseAPIClient()
         
-        available_licenses = license_client.get_available_licenses(team_id=str(team_id))
+        available_licenses = license_client.get_team_available_licenses(team_id=str(team_id))
         
         if len(available_licenses) < license_count:
             pytest.skip(f"Not enough available licenses in team {team_id}. Required: {license_count}, Available: {len(available_licenses)}")
@@ -61,44 +61,28 @@ def random_team_id():
     return random.choice(list(config.TEAM_IDS.values()))
 
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def license_client():
+    """ Session-scoped license client for all tests"""
     license_client = LicenseAPIClient()
     return license_client
+    #Could use yield to close the session after ALL tests complete:
+    #yield license_client
+    #license_client.session.close()
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def unauthorized_license_client():
+    """nSession-scoped unauthorized client """
     license_client = LicenseAPIClient()
     license_client.session.headers = {}
     return license_client
 
-@pytest.fixture()
+@pytest.fixture(scope="session")
 def invalid_api_key_license_client():
+    """ Session-scoped invalid API key client """
     license_client = LicenseAPIClient()
     license_client.session.headers.update({"X-Api-Key": "invalid_api_key_12345"})
     return license_client
-
-
-@pytest.fixture()
-def test_setup(request, license_client, unauthorized_license_client, invalid_api_key_license_client):
-    # Usage: @pytest.mark.parametrize("test_setup", ["license_client", "unauthorized_license_client"], indirect=True)
-    class TestSetup:
-        def __init__(self, client_type="license_client", license_client=None, unauthorized_license_client=None, invalid_api_key_license_client=None):
-            self.test_data = test_data_generator
-            
-            # Create the appropriate client based on parameter
-            if client_type == "license_client":
-                self.license_client = license_client
-            elif client_type == "unauthorized_license_client":
-                self.license_client = unauthorized_license_client
-            elif client_type == "invalid_api_key_license_client":
-                self.license_client = invalid_api_key_license_client
-            else:
-                raise ValueError(f"Unknown client_type: {client_type}. Valid options: 'license_client', 'unauthorized_license_client', 'invalid_api_key_license_client'")
-    
-    # Get client type from parameter, default to "license_client"
-    client_type = getattr(request, 'param', 'license_client')
-    return TestSetup(client_type, license_client, unauthorized_license_client, invalid_api_key_license_client)
 
 
 @pytest.fixture(autouse=True)
