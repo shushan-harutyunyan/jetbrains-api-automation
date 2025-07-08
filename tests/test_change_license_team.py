@@ -14,7 +14,7 @@ class TestChangeLicenseTeam:
         
     @pytest.fixture
     def valid_test_data(self, request, license_client):
-        #Usage: @pytest.mark.parametrize("valid_test_data", [("Team 1", "Team 2", 3), ("Team 2", "Team 1", 2)], indirect=True)
+        #Usage: @pytest.mark.parametrize("valid_test_data", [("Team 1", "Team 2", 3), ("Team 2", "Team 1", 3)], indirect=True)
         source_team_name, target_team_name, license_count = request.param
         source_team_id = config.TEAM_IDS[source_team_name]
         target_team_id = config.TEAM_IDS[target_team_name]
@@ -38,8 +38,8 @@ class TestChangeLicenseTeam:
     @pytest.mark.license_team_change
     @pytest.mark.parametrize("valid_test_data", [
         ("Team 1", "Team 2", 3),
-        ("Team 2", "Team 1", 2),
-    ], indirect=True, ids=["Team 1 to Team 2 (3 licenses)", "Team 2 to Team 1 (2 licenses)"])
+        ("Team 2", "Team 1", 3),
+    ], indirect=True, ids=["Team 1 to Team 2 (3 licenses)", "Team 2 to Team 1 (3 licenses)"])
     def test_change_license_team_valid_data(self, valid_test_data, license_client):
         """
         Test Case: Change team for licenses with valid data

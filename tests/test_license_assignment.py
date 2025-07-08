@@ -25,13 +25,20 @@ class TestLicenseAssignment:
                 "lastName": user_data.get("lastName")
             }
             return valid_test_data
+    # Could be:        
+    #     yield test_data
+    
+    #     try:
+    #         license_client.revoke_license(test_data["licenseId"])
+    #         print(f"Revoked license: {test_data['licenseId']}")
+    #     except Exception as e:
+    #         print(f"Failed to revoke license: {e}")    
         except Exception as e:
             error_msg = f"Failed to create valid test data: {str(e)}"
             pytest.fail(error_msg)
 
     @pytest.mark.positive
     @pytest.mark.license_assignment
-    @pytest.mark.shared_state  # Uses real license data
     def test_assign_license_valid_user_data(self, valid_test_data, license_client):
         """
         Test Case: Assign license with valid user data
@@ -53,7 +60,6 @@ class TestLicenseAssignment:
 
     @pytest.mark.negative
     @pytest.mark.license_assignment
-    @pytest.mark.parallel_safe  # Pure validation test - no shared state
     @pytest.mark.parametrize("invalid_email", test_data_generator.generate_invalid_email_addresses())
     def test_assign_license_invalid_email_formats(self, valid_test_data, invalid_email, license_client):
         """
@@ -213,7 +219,6 @@ class TestLicenseAssignment:
     @pytest.mark.negative
     @pytest.mark.authorization
     @pytest.mark.license_assignment
-    @pytest.mark.parallel_safe  # Auth test - no shared state
     def test_assign_license_missing_authorization(self, valid_test_data, unauthorized_license_client):
         """
         Test Case: Assign license without proper authentication
@@ -304,7 +309,6 @@ class TestLicenseAssignment:
     
     @pytest.mark.negative
     @pytest.mark.license_assignment
-    @pytest.mark.shared_state  # Uses real assigned license data
     def test_assign_license_duplicate_assignment(self, valid_test_data, license_client):
         """
         Test Case: Assign an already assigned license to a different user
