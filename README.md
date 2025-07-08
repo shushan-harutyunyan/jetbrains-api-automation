@@ -66,6 +66,8 @@ cp .env.example .env
 
 # Edit .env file with your actual values
 # JETBRAINS_API_KEY=your_actual_api_key_here
+# JETBRAINS_API_KEY_TEAM_1=your_actual_api_key_here
+# JETBRAINS_API_KEY_TEAM_2=your_actual_api_key_here
 # JETBRAINS_CUSTOMER_CODE=your_actual_customer_code_here
 ```
 
@@ -74,6 +76,8 @@ cp .env.example .env
 # Create .env file with your actual values
 cat > .env << EOF
 JETBRAINS_API_KEY=your_actual_api_key_here
+JETBRAINS_API_KEY_TEAM_1=your_actual_api_key_here
+JETBRAINS_API_KEY_TEAM_2=your_actual_api_key_here
 JETBRAINS_CUSTOMER_CODE=your_actual_customer_code_here
 DEBUG=false
 EOF
@@ -82,6 +86,8 @@ EOF
 **Option C: Export in shell**
 ```bash
 export JETBRAINS_API_KEY="your_actual_api_key_here"
+export JETBRAINS_API_KEY_TEAM_1 = "your_actual_api_key_here"
+export JETBRAINS_API_KEY_TEAM_2 = "your_actual_api_key_here"
 export JETBRAINS_CUSTOMER_CODE="your_actual_customer_code_here"
 ```
 
@@ -175,9 +181,12 @@ python -m pytest --html=reports/report.html --self-contained-html
 - **pytest-html**: HTML test reports
 - **pytest-json-report**: JSON test reports
 
+Before running the tests, set the following environment variables:
 
 ### Environment Variables
 - `JETBRAINS_API_KEY`: Your JetBrains API key (required)
+- `JETBRAINS_API_KEY_TEAM_1` - API key for Team 1 (optional,for team-specific tests)
+- `JETBRAINS_API_KEY_TEAM_2` - API key for Team 2 (optional, for team-specific tests)
 - `JETBRAINS_CUSTOMER_CODE`: Your customer code (required)
 - `DEBUG`: Set to 'true' for verbose logging (optional)
 
