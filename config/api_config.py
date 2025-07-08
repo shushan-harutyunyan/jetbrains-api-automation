@@ -12,6 +12,8 @@ class APIConfig:
     BASE_URL: str = "https://account.jetbrains.com/api/v1"
     
     API_KEY: str = os.getenv("JETBRAINS_API_KEY", "")
+    API_KEY_TEAM_1: str = os.getenv("JETBRAINS_API_KEY_TEAM_1", "")
+    API_KEY_TEAM_2: str = os.getenv("JETBRAINS_API_KEY_TEAM_2", "")
     CUSTOMER_CODE: str = os.getenv("JETBRAINS_CUSTOMER_CODE", "")
     
     if not API_KEY:
@@ -77,6 +79,10 @@ class ErrorCodes:
     INVALID_TOKEN = {
         "code": "INVALID_TOKEN",
         "description": "The token provided is invalid"
+    }
+    TOKEN_TYPE_MISMATCH = {
+        "code": "TOKEN_TYPE_MISMATCH",
+        "description": "Changing team is not possible with a token that was generated for a specific team"
     }
     
     # Validation errors

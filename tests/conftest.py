@@ -71,6 +71,30 @@ def license_client():
     #license_client.session.close()
 
 @pytest.fixture(scope="session")
+def license_client_team_1():
+    """ Session-scoped license client for Team 1 with team-specific API key """
+    license_client = LicenseAPIClient()
+    
+    team_1_api_key = config.API_KEY_TEAM_1
+    if not team_1_api_key:
+        pytest.skip("JETBRAINS_API_KEY_TEAM_1 environment variable not set")
+    
+    license_client.session.headers.update({"X-Api-Key": team_1_api_key})
+    return license_client
+
+@pytest.fixture(scope="session")
+def license_client_team_2():
+    """ Session-scoped license client for Team 2 with team-specific API key """
+    license_client = LicenseAPIClient()
+    
+    team_2_api_key = config.API_KEY_TEAM_2
+    if not team_2_api_key:
+        pytest.skip("JETBRAINS_API_KEY_TEAM_2 environment variable not set")
+    
+    license_client.session.headers.update({"X-Api-Key": team_2_api_key})
+    return license_client    
+
+@pytest.fixture(scope="session")
 def unauthorized_license_client():
     """nSession-scoped unauthorized client """
     license_client = LicenseAPIClient()
