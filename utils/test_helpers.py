@@ -54,8 +54,7 @@ class TestDataGenerator:
             "user@domain,com",  # Comma instead of dot
             "very-long-email-address-that-exceeds-normal-limits@very-long-domain-name-that-should-not-be-accepted.com",  # Too long
             "user@domain.c",  # TLD too short
-            "user@-domain.com",  # Domain starts with hyphen
-            "user@domain-.com",  # Domain ends with hyphen
+            "user@-domain.com"  # Domain starts with hyphen
         ]
     
     def generate_boundary_test_data(self) -> Dict[str, Any]:

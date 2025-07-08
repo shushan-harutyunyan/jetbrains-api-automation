@@ -122,7 +122,7 @@ class TestChangeLicenseTeam:
         """
         invalid_license_id = test_data_generator.generate_invalid_license_id()
         response = license_client.change_license_team(
-            license_ids=invalid_license_id,
+            license_ids=[invalid_license_id],
             target_team_id=config.TEAM_IDS[target_team]
         )
         # Current implementation returns 200 OK for invalid license ID
